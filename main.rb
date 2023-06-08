@@ -1,55 +1,99 @@
-message = 'HOLA'
-key = 'SECRETO'
+class Vigenere
 
-def string_to_ascii_values(string)
-  string.map { |char| char.ord - 65 }
-end
-
-def fill_with_offset(message, key)
-  resized_key = key * (message.length / key.length)
-  offset = key[0...(message.length % key.length)]
-  resized_key + offset
-end
-
-def add_two_adjusted_arrays(numeric_message, numeric_fit_key)
-  for i in 0...numeric_message.length
-    numeric_message[i] += numeric_fit_key[i] % 26
+  def initialize(lang, key)
+    @lang = lang
+    @key = key
   end
-  numeric_message
-end
 
-def ascii_values_to_char(array)
-  return array.map { |value|
-    value += 65
-    value.chr
-  }
-end
+  def fit_key_with_single_word(word)
+    resized_key = @key * (word.length / @key.length)
+    offset = @key[0...(word.length % @key.length)]
+    return resized_key + offset
+  end
 
-fit_key = fill_with_offset(message, key)
+  def fit_key_with_message(message)
+    words = message.split(' ')
+    joined_words = words.join
+    adjusted_key = fit_key_with_single_word(joined_words)
 
-numeric_message = string_to_ascii_values(message.split(''))
-numeric_fit_key = string_to_ascii_values(fit_key.split(''))
+    #Para cada palabra, recorre la key ya ajustada hacia la derecha, dependiendo del tamaño de la palabra
+    for i in 0...words.length
+      words[i] = adjusted_key[0...words[i].length]
+      adjusted_key = adjusted_key[words[i].length...adjusted_key.length]
+    end
+    words.join(' ')
+  end
 
-puts "numeric_message: #{numeric_message}"
-puts "numeric_fit_key: #{numeric_fit_key}"
+  def string_to_ascii(string)
+    string = string.split('')
 
-new_message = add_two_adjusted_arrays(numeric_message, numeric_fit_key)
+    if @lang == 'ESP'
+      return string.map { |char|
 
-puts "new_message: #{new_message}"
+        new_char = nil
+        if char.ord == 'Ñ'.ord
+          # El caracter es la Ñ (Posición 144) ahora 14
+          new_char = 14
+        elsif (char.ord - 'A'.ord) >= 14
+          # Caracteres a la derecha de la Ñ
+          new_char = char.ord - 65 + 1
+        else 
+          new_char = char.ord - 65
+        end
+        new_char
+      }
+    else
+      string.map { |char| char.ord - 65 }
+    end
+  end
 
+  def add_two_adjusted_arrays(numeric_message, numeric_fit_key)
+    mod = @lang == 'ESP' ? 27: 26
+    for i in 0...numeric_message.length
 
-numeric_message = nil
+      if numeric_message[i] == -33
+        next
+      end
 
-new_message = ascii_values_to_char(new_message).join
+      numeric_message[i] = (numeric_message[i] + numeric_fit_key[i]) % mod
+    end
+    numeric_message
+  end
 
-puts new_message
-# puts new_message
+  def ascii_values_to_string(array)
+    string = nil
+    if @lang == 'ESP'
 
-# puts message
-# puts key
+      string = array.map { |value|
+        new_value = nil
 
-puts ""
-for i in 0..26
-  j = i+65  
-  print j.chr
+        if value == 14
+          new_value = 'Ñ'.ord
+
+        elsif value >= 14
+          new_value = value + 'A'.ord - 1
+
+        else
+          new_value = value + 'A'.ord
+        end
+
+        new_value.chr(Encoding::UTF_8)
+      }
+    else
+      string = array.map { |value|
+        value += 65
+        value.chr(Encoding::UTF_8)
+      }
+    end
+    string.join
+  end
+
+  def cipher(message)
+    key_words = fit_key_with_message(message)
+    numeric_message = string_to_ascii(message)
+    numeric_key_words = string_to_ascii(key_words)
+    added_arrays = add_two_adjusted_arrays(numeric_message, numeric_key_words)
+    ascii_values_to_string(added_arrays)
+  end
+
 end
